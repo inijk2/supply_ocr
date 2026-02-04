@@ -211,4 +211,20 @@ MVP에서 중요한 건 빨리 붙고, 숫자에 강한 것:
 5. selection OCR(이름 라인만) / queue OCR(가능하면)
 6. signals JSON 출력
 7. events는 signals 기반으로 최소 생성(예: `queue_text==Marine` → `marine_started`)
+
+---
+
+## 9) ROI 캘리브레이션 (선택/큐)
+
+선택 패널과 생산 큐 ROI는 자동으로 추론하지 않고, 한 번만 수동 캘리브레이션합니다.
+
+```
+python src/roi/calibrate.py yt_480p.mp4 --time 10 --out src/roi/profile_480p.json
+```
+
+위 스크립트는:
+
+- 공급(supply)은 템플릿 매칭으로 자동 탐지
+- selection_panel / production_queue는 드래그로 선택
+- `profile_480p.json`을 갱신
 ```
