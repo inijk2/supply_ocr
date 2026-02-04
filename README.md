@@ -27,7 +27,7 @@ MVP에서는 아이콘 분류 대신, 큐/커맨드 카드에 텍스트가 뜨�
 ## 1) 입력 (동일)
 
 - mp4 (유튜브 다운로드는 별도 스크립트/파이프)
-- 해상도 고정: `1920x1080` (리마스터)만
+- 해상도 고정: `854x480` (480p)만
 - 구간: `0~420초`
 
 ---
@@ -38,7 +38,7 @@ MVP에서는 아이콘 분류 대신, 큐/커맨드 카드에 텍스트가 뜨�
 {
   "version": 1,
   "segment": { "start_sec": 0, "end_sec": 420 },
-  "roi_profile": "rm_1920x1080_v1",
+  "roi_profile": "rm_854x480_v1",
   "signals": {
     "supply_series": [
       {
@@ -95,12 +95,14 @@ MVP에서는 아이콘 분류 대신, 큐/커맨드 카드에 텍스트가 뜨�
 
 ## 3) 모듈 구조 (OCR 포함, 그래도 단순)
 
+구현은 **Python 중심**으로 진행 가능. (OCR/영상처리 라이브러리 호환 우선)
+
 ```
 src/
   decode/
     ffmpeg_decode.ts           # 프레임 추출(저fps) + 트리거 윈도우 고fps
   roi/
-    profile_rm_1080p.json
+    profile_480p.json
     crop.ts
   detect/
     diff_trigger.ts            # roi changed: selection_panel, production_queue
