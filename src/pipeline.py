@@ -42,7 +42,7 @@ def _save_evidence(img, path: Path) -> str:
 def run_pipeline(cfg: PipelineConfig) -> Dict:
     ocr = OCREngine(cfg.ocr_engine)
     profile_path = Path(cfg.profile_path)
-    templates_dir = Path(__file__).resolve().parent.parent / "a"
+    templates_dir = _repo_root() / "a"
 
     evidence_dir = Path(cfg.output_path).resolve().parent / "evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -195,3 +195,7 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
 
     Path(cfg.output_path).write_text(json.dumps(output, indent=2), encoding="utf-8")
     return output
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
