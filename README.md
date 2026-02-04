@@ -229,6 +229,14 @@ python src/roi/calibrate.py yt_480p.mp4 --time 10 --out src/roi/profile_480p.jso
 - selection_panel / production_queue는 드래그로 선택
 - `profile_480p.json`을 갱신
 
+GUI가 잘 안될 때는 수동 좌표를 넘길 수 있습니다:
+
+```
+python src/roi/calibrate.py yt_480p.mp4 --time 100 --dump-frame frame.png --sel 10,360,300,110 --queue 540,360,300,110 --out src/roi/profile_480p.json
+```
+
+- `--dump-frame`으로 저장된 프레임을 이미지 뷰어에서 열고 좌표를 측정한 뒤 `--sel`, `--queue`로 입력
+
 ---
 
 ## 10) 평가
