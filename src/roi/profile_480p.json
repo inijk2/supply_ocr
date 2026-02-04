@@ -1,0 +1,27 @@
+{
+  "resolution": [854, 480],
+  "rois": {
+    "supply": {
+      "mode": "template",
+      "template": "../../a/supply_frame.png",
+      "padding": [0, 0, 0, 0],
+      "enabled": true
+    },
+    "selection_panel": {
+      "mode": "static",
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0,
+      "enabled": false
+    },
+    "production_queue": {
+      "mode": "static",
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0,
+      "enabled": false
+    }
+  }
+}

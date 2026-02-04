@@ -1,0 +1,8 @@
+# Core
+numpy
+opencv-python
+Pillow
+pytesseract
+
+# Dev/test
+pytest
