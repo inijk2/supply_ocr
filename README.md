@@ -227,4 +227,18 @@ python src/roi/calibrate.py yt_480p.mp4 --time 10 --out src/roi/profile_480p.jso
 - 공급(supply)은 템플릿 매칭으로 자동 탐지
 - selection_panel / production_queue는 드래그로 선택
 - `profile_480p.json`을 갱신
+
+---
+
+## 10) 평가
+
+GT JSON과 예측 결과를 비교합니다.
+
+```
+python src/eval/eval.py output.json gt.json --max-dt 3 -o eval.json
+```
+
+출력:
+- Precision / Recall / F1
+- mean |Δt|
 ```

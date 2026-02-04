@@ -51,6 +51,14 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
     selection_changes = []
     queue_events = []
     events = []
+    ocr_stats = {
+        "supply_parsed": 0,
+        "supply_total": 0,
+        "selection_nonempty": 0,
+        "selection_total": 0,
+        "queue_nonempty": 0,
+        "queue_total": 0,
+    }
 
     last_supply = None
     supply_idx = 0
@@ -64,8 +72,10 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
             if roi is None:
                 continue
             result = read_supply(roi, templates_dir, ocr)
+            ocr_stats["supply_total"] += 1
             if result.used is None or result.total is None:
                 continue
+            ocr_stats["supply_parsed"] += 1
             if best is None or result.conf > best["conf"]:
                 best = {"t": ct, "frame": frame, "roi": roi, "res": result, "conf": result.conf}
         if best is None:
@@ -110,6 +120,9 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
                     res = read_selection(best["roi"], ocr)
                     ev_path = evidence_dir / f"sel_{roi_idx:06d}.jpg"
                     frame_path = _save_evidence(best["roi"], ev_path)
+                    ocr_stats["selection_total"] += 1
+                    if res.selected_name.text or res.hp_text.text:
+                        ocr_stats["selection_nonempty"] += 1
                     selection_changes.append(
                         {
                             "t": round(float(best["t"]), 3),
@@ -139,6 +152,9 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
                     res = read_queue(best["roi"], ocr)
                     ev_path = evidence_dir / f"q_{roi_idx:06d}.jpg"
                     frame_path = _save_evidence(best["roi"], ev_path)
+                    ocr_stats["queue_total"] += 1
+                    if res.queue_text.text:
+                        ocr_stats["queue_nonempty"] += 1
                     queue_events.append(
                         {
                             "t": round(float(best["t"]), 3),
@@ -173,6 +189,7 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
             "warnings": [],
             "ocr_engine": ocr.name,
             "preprocess": "upscale3x+adaptive_threshold",
+            "ocr_stats": ocr_stats,
         },
     }
 
