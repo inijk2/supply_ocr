@@ -25,6 +25,10 @@ class OCREngine:
         return self._impl_name or "none"
 
     def _init_impl(self) -> None:
+        if self.engine in ("none", "off", "disabled"):
+            self._impl = None
+            self._impl_name = "none"
+            return
         if self.engine == "auto":
             for name in ("paddleocr", "easyocr", "tesseract"):
                 if self._try_init(name):
@@ -63,7 +67,7 @@ class OCREngine:
         return False
 
     def read_text(self, img: np.ndarray, whitelist: str | None = None) -> OCRResult:
-        if self._impl_name is None:
+        if self._impl_name is None or self._impl_name == "none":
             return OCRResult("", 0.0)
         if self._impl_name == "paddleocr":
             return self._read_paddle(img, whitelist)
@@ -97,10 +101,13 @@ class OCREngine:
         return OCRResult(text.strip(), conf)
 
     def _read_tesseract(self, img: np.ndarray, whitelist: str | None) -> OCRResult:
-        config = "--psm 7"
-        if whitelist:
-            config += f" -c tessedit_char_whitelist={whitelist}"
-        data = self._impl.image_to_data(img, output_type=self._impl.Output.DICT, config=config)
+        try:
+            config = "--psm 7"
+            if whitelist:
+                config += f" -c tessedit_char_whitelist={whitelist}"
+            data = self._impl.image_to_data(img, output_type=self._impl.Output.DICT, config=config)
+        except Exception:
+            return OCRResult("", 0.0)
         if not data or not data.get("text"):
             return OCRResult("", 0.0)
         texts = []

@@ -158,6 +158,9 @@ def read_supply(
     left_raw = left_raw[:, : max(1, left_raw.shape[1])]
     right_raw = right_raw[:, : max(1, right_raw.shape[1])]
 
+    if left_raw.size == 0 or right_raw.size == 0:
+        return SupplyReadResult(None, None, "", 0.0)
+
     left_pre = preprocess(left_raw)
     right_pre = preprocess(right_raw)
     left_ocr = ocr.read_text(left_pre, whitelist="0123456789")
