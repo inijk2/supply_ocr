@@ -152,8 +152,21 @@ def read_supply(
     sx, sy = slash_loc
     sh, sw = slash_template.shape[:2]
 
-    left_raw = gray[:, : max(1, sx - 1)]
-    right_raw = gray[:, sx + sw + 1 :]
+    left_raw = None
+    right_raw = None
+
+    if slash_conf >= 0.6:
+        left_raw = gray[:, : max(1, sx - 1)]
+        right_raw = gray[:, sx + sw + 1 :]
+    else:
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        split_idx = _split_by_projection(binary)
+        if split_idx is not None:
+            left_raw = gray[:, :split_idx]
+            right_raw = gray[:, split_idx:]
+
+    if left_raw is None or right_raw is None:
+        return SupplyReadResult(None, None, "", 0.0)
 
     left_raw = left_raw[:, : max(1, left_raw.shape[1])]
     right_raw = right_raw[:, : max(1, right_raw.shape[1])]

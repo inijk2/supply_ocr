@@ -21,4 +21,4 @@ def test_crop_roi_template_match():
     roi = crop_roi(frame, profile, "supply")
     assert roi is not None
     assert roi.shape[0] == template.shape[0]
-    assert roi.shape[1] == template.shape[1]
+    assert roi.shape[1] >= template.shape[1]

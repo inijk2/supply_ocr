@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 import cv2
 
-from decode.ffmpeg_decode import DecodeConfig, iter_frames, sample_frames
+from decode.ffmpeg_decode import DecodeConfig, iter_frames, sample_frames_with_capture, open_capture
 from detect.diff_trigger import DiffConfig, changed
 from ocr.engine import OCREngine
 from ocr.preprocess import sharpness_score
@@ -65,40 +65,44 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
     supply_idx = 0
 
     decode_cfg = DecodeConfig(fps=cfg.supply_fps, start_sec=cfg.start_sec, end_sec=cfg.end_sec)
-    for t, _ in iter_frames(cfg.video_path, decode_cfg):
-        candidates = sample_frames(cfg.video_path, t, cfg.supply_window_sec, cfg.supply_samples)
-        best = None
-        for ct, frame in candidates:
-            roi = crop_roi(frame, profile_path, "supply")
-            if roi is None:
+    cap = open_capture(cfg.video_path)
+    try:
+        for t, _ in iter_frames(cfg.video_path, decode_cfg):
+            candidates = sample_frames_with_capture(cap, t, cfg.supply_window_sec, cfg.supply_samples)
+            best = None
+            for ct, frame in candidates:
+                roi = crop_roi(frame, profile_path, "supply")
+                if roi is None:
+                    continue
+                result = read_supply(roi, templates_dir, ocr)
+                ocr_stats["supply_total"] += 1
+                if result.used is None or result.total is None:
+                    continue
+                ocr_stats["supply_parsed"] += 1
+                if best is None or result.conf > best["conf"]:
+                    best = {"t": ct, "frame": frame, "roi": roi, "res": result, "conf": result.conf}
+            if best is None:
                 continue
-            result = read_supply(roi, templates_dir, ocr)
-            ocr_stats["supply_total"] += 1
-            if result.used is None or result.total is None:
-                continue
-            ocr_stats["supply_parsed"] += 1
-            if best is None or result.conf > best["conf"]:
-                best = {"t": ct, "frame": frame, "roi": roi, "res": result, "conf": result.conf}
-        if best is None:
-            continue
-        current = (best["res"].used, best["res"].total)
-        if first_supply_time is None:
-            first_supply_time = float(best["t"])
-        if last_supply is None or current != last_supply:
-            supply_idx += 1
-            ev_path = evidence_dir / f"supply_{supply_idx:06d}.jpg"
-            frame_path = _save_evidence(best["roi"], ev_path)
-            supply_series.append(
-                {
-                    "t": round(float(best["t"]), 3),
-                    "used": best["res"].used,
-                    "total": best["res"].total,
-                    "raw_text": best["res"].raw_text,
-                    "conf": round(float(best["res"].conf), 3),
-                    "frame": frame_path,
-                }
-            )
-            last_supply = current
+            current = (best["res"].used, best["res"].total)
+            if first_supply_time is None:
+                first_supply_time = float(best["t"])
+            if last_supply is None or current != last_supply:
+                supply_idx += 1
+                ev_path = evidence_dir / f"supply_{supply_idx:06d}.jpg"
+                frame_path = _save_evidence(best["roi"], ev_path)
+                supply_series.append(
+                    {
+                        "t": round(float(best["t"]), 3),
+                        "used": best["res"].used,
+                        "total": best["res"].total,
+                        "raw_text": best["res"].raw_text,
+                        "conf": round(float(best["res"].conf), 3),
+                        "frame": frame_path,
+                    }
+                )
+                last_supply = current
+    finally:
+        cap.release()
 
     if first_supply_time is None:
         first_supply_time = cfg.start_sec
@@ -109,78 +113,82 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
     roi_idx = 0
 
     decode_cfg_roi = DecodeConfig(fps=cfg.supply_fps, start_sec=first_supply_time, end_sec=cfg.end_sec)
-    for t, frame in iter_frames(cfg.video_path, decode_cfg_roi):
-        sel_roi = crop_roi(frame, profile_path, "selection_panel")
-        if sel_roi is not None:
-            if last_sel is None or changed(last_sel, sel_roi, diff_cfg):
-                roi_idx += 1
-                frames = sample_frames(cfg.video_path, t, cfg.roi_window_sec, cfg.roi_samples)
-                best = None
-                for ct, f in frames:
-                    roi = crop_roi(f, profile_path, "selection_panel")
-                    if roi is None:
-                        continue
-                    sharp = sharpness_score(roi)
-                    if best is None or sharp > best["sharp"]:
-                        best = {"t": ct, "roi": roi, "sharp": sharp}
-                if best:
-                    res = read_selection(best["roi"], ocr)
-                    ev_path = evidence_dir / f"sel_{roi_idx:06d}.jpg"
-                    frame_path = _save_evidence(best["roi"], ev_path)
-                    ocr_stats["selection_total"] += 1
-                    if res.selected_name.text or res.hp_text.text:
-                        ocr_stats["selection_nonempty"] += 1
-                    selection_changes.append(
-                        {
-                            "t": round(float(best["t"]), 3),
-                            "frame": frame_path,
-                            "ocr": {
-                                "selected_name": {"text": res.selected_name.text, "conf": round(float(res.selected_name.conf), 3)},
-                                "hp_text": {"text": res.hp_text.text, "conf": round(float(res.hp_text.conf), 3)},
-                            },
-                        }
-                    )
-                last_sel = sel_roi
-
-        queue_roi = crop_roi(frame, profile_path, "production_queue")
-        if queue_roi is not None:
-            if last_queue is None or changed(last_queue, queue_roi, diff_cfg):
-                roi_idx += 1
-                frames = sample_frames(cfg.video_path, t, cfg.roi_window_sec, cfg.roi_samples)
-                best = None
-                for ct, f in frames:
-                    roi = crop_roi(f, profile_path, "production_queue")
-                    if roi is None:
-                        continue
-                    sharp = sharpness_score(roi)
-                    if best is None or sharp > best["sharp"]:
-                        best = {"t": ct, "roi": roi, "sharp": sharp}
-                if best:
-                    res = read_queue(best["roi"], ocr)
-                    ev_path = evidence_dir / f"q_{roi_idx:06d}.jpg"
-                    frame_path = _save_evidence(best["roi"], ev_path)
-                    ocr_stats["queue_total"] += 1
-                    if res.queue_text.text:
-                        ocr_stats["queue_nonempty"] += 1
-                    queue_events.append(
-                        {
-                            "t": round(float(best["t"]), 3),
-                            "frame": frame_path,
-                            "ocr": {"queue_text": {"text": res.queue_text.text, "conf": round(float(res.queue_text.conf), 3)}},
-                        }
-                    )
-                    if res.queue_text.text:
-                        events.append(
+    cap = open_capture(cfg.video_path)
+    try:
+        for t, frame in iter_frames(cfg.video_path, decode_cfg_roi):
+            sel_roi = crop_roi(frame, profile_path, "selection_panel")
+            if sel_roi is not None:
+                if last_sel is None or changed(last_sel, sel_roi, diff_cfg):
+                    roi_idx += 1
+                    frames = sample_frames_with_capture(cap, t, cfg.roi_window_sec, cfg.roi_samples)
+                    best = None
+                    for ct, f in frames:
+                        roi = crop_roi(f, profile_path, "selection_panel")
+                        if roi is None:
+                            continue
+                        sharp = sharpness_score(roi)
+                        if best is None or sharp > best["sharp"]:
+                            best = {"t": ct, "roi": roi, "sharp": sharp}
+                    if best:
+                        res = read_selection(best["roi"], ocr)
+                        ev_path = evidence_dir / f"sel_{roi_idx:06d}.jpg"
+                        frame_path = _save_evidence(best["roi"], ev_path)
+                        ocr_stats["selection_total"] += 1
+                        if res.selected_name.text or res.hp_text.text:
+                            ocr_stats["selection_nonempty"] += 1
+                        selection_changes.append(
                             {
                                 "t": round(float(best["t"]), 3),
-                                "id": f"{res.queue_text.text.strip().lower()}_started",
-                                "count": 1,
-                                "conf": round(float(res.queue_text.conf), 3),
-                                "evidence": [frame_path],
-                                "source": "queue_ocr",
+                                "frame": frame_path,
+                                "ocr": {
+                                    "selected_name": {"text": res.selected_name.text, "conf": round(float(res.selected_name.conf), 3)},
+                                    "hp_text": {"text": res.hp_text.text, "conf": round(float(res.hp_text.conf), 3)},
+                                },
                             }
                         )
-                last_queue = queue_roi
+                    last_sel = sel_roi
+
+            queue_roi = crop_roi(frame, profile_path, "production_queue")
+            if queue_roi is not None:
+                if last_queue is None or changed(last_queue, queue_roi, diff_cfg):
+                    roi_idx += 1
+                    frames = sample_frames_with_capture(cap, t, cfg.roi_window_sec, cfg.roi_samples)
+                    best = None
+                    for ct, f in frames:
+                        roi = crop_roi(f, profile_path, "production_queue")
+                        if roi is None:
+                            continue
+                        sharp = sharpness_score(roi)
+                        if best is None or sharp > best["sharp"]:
+                            best = {"t": ct, "roi": roi, "sharp": sharp}
+                    if best:
+                        res = read_queue(best["roi"], ocr)
+                        ev_path = evidence_dir / f"q_{roi_idx:06d}.jpg"
+                        frame_path = _save_evidence(best["roi"], ev_path)
+                        ocr_stats["queue_total"] += 1
+                        if res.queue_text.text:
+                            ocr_stats["queue_nonempty"] += 1
+                        queue_events.append(
+                            {
+                                "t": round(float(best["t"]), 3),
+                                "frame": frame_path,
+                                "ocr": {"queue_text": {"text": res.queue_text.text, "conf": round(float(res.queue_text.conf), 3)}},
+                            }
+                        )
+                        if res.queue_text.text:
+                            events.append(
+                                {
+                                    "t": round(float(best["t"]), 3),
+                                    "id": f"{res.queue_text.text.strip().lower()}_started",
+                                    "count": 1,
+                                    "conf": round(float(res.queue_text.conf), 3),
+                                    "evidence": [frame_path],
+                                    "source": "queue_ocr",
+                                }
+                            )
+                    last_queue = queue_roi
+    finally:
+        cap.release()
 
     output = {
         "version": 1,
