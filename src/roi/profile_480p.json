@@ -4,6 +4,7 @@
     "supply": {
       "mode": "template",
       "template": "../../a/supply_frame.png",
+      "template_min_conf": 0.8,
       "padding": [0, 0, 0, 0],
       "enabled": true
     },

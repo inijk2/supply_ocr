@@ -51,6 +51,7 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
     selection_changes = []
     queue_events = []
     events = []
+    first_supply_time = None
     ocr_stats = {
         "supply_parsed": 0,
         "supply_total": 0,
@@ -81,6 +82,8 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
         if best is None:
             continue
         current = (best["res"].used, best["res"].total)
+        if first_supply_time is None:
+            first_supply_time = float(best["t"])
         if last_supply is None or current != last_supply:
             supply_idx += 1
             ev_path = evidence_dir / f"supply_{supply_idx:06d}.jpg"
@@ -97,12 +100,16 @@ def run_pipeline(cfg: PipelineConfig) -> Dict:
             )
             last_supply = current
 
+    if first_supply_time is None:
+        first_supply_time = cfg.start_sec
+
     diff_cfg = DiffConfig(cfg.diff_threshold)
     last_sel = None
     last_queue = None
     roi_idx = 0
 
-    for t, frame in iter_frames(cfg.video_path, decode_cfg):
+    decode_cfg_roi = DecodeConfig(fps=cfg.supply_fps, start_sec=first_supply_time, end_sec=cfg.end_sec)
+    for t, frame in iter_frames(cfg.video_path, decode_cfg_roi):
         sel_roi = crop_roi(frame, profile_path, "selection_panel")
         if sel_roi is not None:
             if last_sel is None or changed(last_sel, sel_roi, diff_cfg):

@@ -65,6 +65,7 @@ def main() -> None:
                 "y": int(sy),
                 "w": int(sw),
                 "h": int(sh),
+                "template_min_conf": 0.8,
                 "enabled": True,
             },
             "selection_panel": {

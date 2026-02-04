@@ -132,6 +132,7 @@ src/
 - `t` 근처 `0.25초`에서 `7프레임` 샘플
 - preprocess 후 OCR `conf`가 최대인 프레임을 채택
 - 값이 바뀌면 기록 + evidence 저장
+- **인트로 구간은 자동 스킵**: supply 템플릿 매칭이 충분히 높은 구간부터 시작
 
 ### roi_changed(t, roi=selected_panel|production_queue)
 

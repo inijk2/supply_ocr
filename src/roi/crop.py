@@ -17,6 +17,7 @@ class ROIDefinition:
     w: int = 0
     h: int = 0
     template: str | None = None
+    template_min_conf: float = 0.8
     padding: Tuple[int, int, int, int] = (0, 0, 0, 0)
     enabled: bool = True
 
@@ -32,16 +33,17 @@ def _load_profile(path: Path) -> Dict[str, ROIDefinition]:
             w=val.get("w", 0),
             h=val.get("h", 0),
             template=val.get("template"),
+            template_min_conf=float(val.get("template_min_conf", 0.8)),
             padding=tuple(val.get("padding", [0, 0, 0, 0])),
             enabled=val.get("enabled", True),
         )
     return rois
 
 
-def _match_template(img: np.ndarray, template: np.ndarray) -> Tuple[int, int]:
+def _match_template(img: np.ndarray, template: np.ndarray) -> Tuple[Tuple[int, int], float]:
     res = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
-    _, _, _, max_loc = cv2.minMaxLoc(res)
-    return max_loc
+    _, max_val, _, max_loc = cv2.minMaxLoc(res)
+    return max_loc, float(max_val)
 
 
 def crop_roi(frame: np.ndarray, profile_path: Path, name: str) -> np.ndarray | None:
@@ -59,7 +61,9 @@ def crop_roi(frame: np.ndarray, profile_path: Path, name: str) -> np.ndarray | N
             return None
         tpl = cv2.imread(str(tpl_path), cv2.IMREAD_GRAYSCALE)
         gray = frame if len(frame.shape) == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        x, y = _match_template(gray, tpl)
+        (x, y), conf = _match_template(gray, tpl)
+        if conf < roi.template_min_conf:
+            return None
         h, w = tpl.shape[:2]
         pad_l, pad_t, pad_r, pad_b = roi.padding
         x0 = max(0, x - pad_l)
