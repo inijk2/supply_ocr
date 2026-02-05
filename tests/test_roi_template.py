@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import cv2
 import numpy as np
@@ -17,8 +18,21 @@ def test_crop_roi_template_match():
     frame[y : y + template.shape[0], x : x + template.shape[1]] = template
     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
-    profile = base / "src" / "roi" / "profile_480p.json"
-    roi = crop_roi(frame, profile, "supply")
+    profile = {
+        "resolution": [200, 120],
+        "rois": {
+            "supply": {
+                "mode": "template",
+                "template": str(tpl_path),
+                "template_min_conf": 0.5,
+                "padding": [0, 0, 0, 0],
+                "enabled": True,
+            }
+        },
+    }
+    profile_path = base / "tests" / "_tmp_profile.json"
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    roi = crop_roi(frame, profile_path, "supply")
     assert roi is not None
     assert roi.shape[0] == template.shape[0]
     assert roi.shape[1] >= template.shape[1]

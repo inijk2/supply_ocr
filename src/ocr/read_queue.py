@@ -6,7 +6,7 @@ from typing import Tuple
 import numpy as np
 
 from .engine import OCREngine, OCRResult
-from .preprocess import preprocess
+from .preprocess import preprocess, preprocess_text
 
 
 @dataclass
@@ -24,6 +24,6 @@ def read_queue(
         text_line = (0, 0, w, max(1, int(h * 0.4)))
     x, y, cw, ch = text_line
     crop = roi_img[y : y + ch, x : x + cw]
-    pre = preprocess(crop)
+    pre = preprocess_text(crop)
     res = ocr.read_text(pre, whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ")
     return QueueOCRResult(res)

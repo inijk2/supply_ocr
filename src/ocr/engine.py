@@ -5,6 +5,14 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
+import cv2
+
+os.environ.setdefault("FLAGS_use_onednn", "false")
+os.environ.setdefault("FLAGS_use_mkldnn", "false")
+os.environ.setdefault("FLAGS_enable_pir_api", "0")
+os.environ.setdefault("PADDLE_ENABLE_PIR", "0")
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+os.environ.setdefault("PYTHONUTF8", "1")
 
 
 @dataclass
@@ -41,7 +49,7 @@ class OCREngine:
             try:
                 from paddleocr import PaddleOCR  # type: ignore
 
-                self._impl = PaddleOCR(lang="en", show_log=False)
+                self._impl = PaddleOCR(lang="en")
                 self._impl_name = "paddleocr"
                 return True
             except Exception:
@@ -50,7 +58,7 @@ class OCREngine:
             try:
                 import easyocr  # type: ignore
 
-                self._impl = easyocr.Reader(["en"], gpu=False)
+                self._impl = easyocr.Reader(["en"], gpu=False, verbose=False)
                 self._impl_name = "easyocr"
                 return True
             except Exception:
@@ -78,10 +86,9 @@ class OCREngine:
         return OCRResult("", 0.0)
 
     def _read_paddle(self, img: np.ndarray, whitelist: str | None) -> OCRResult:
-        config = {}
-        if whitelist:
-            config["rec_char_dict_path"] = None
-        result = self._impl.ocr(img, cls=False)
+        if img.ndim == 2:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        result = self._impl.ocr(img)
         if not result:
             return OCRResult("", 0.0)
         best = max(result, key=lambda r: r[1][1])

@@ -64,3 +64,9 @@ def preprocess(img: np.ndarray, cfg: PreprocessConfig | None = None) -> np.ndarr
     if cfg.use_morph:
         out = morph_cleanup(out, cfg.morph_kernel)
     return out
+
+
+def preprocess_text(img: np.ndarray, upscale: int = 3, denoise_strength: int = 10) -> np.ndarray:
+    out = upscale3x(img, upscale)
+    out = denoise(out, denoise_strength)
+    return out

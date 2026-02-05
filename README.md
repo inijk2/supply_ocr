@@ -250,4 +250,20 @@ python src/eval/eval.py output.json gt.json --max-dt 3 -o eval.json
 출력:
 - Precision / Recall / F1
 - mean |Δt|
+
+---
+
+## 11) 실행
+
+기본 실행:
+
+```
+python src/cli.py yt_480p.mp4 -o output.json
+```
+
+느린 OCR 엔진(easyocr 등)에서는 샘플 수를 줄여 속도를 확보할 수 있습니다:
+
+```
+python src/cli.py yt_480p.mp4 -o output.json --ocr easyocr --fps 1 --supply-samples 3 --roi-samples 4
+```
 ```
