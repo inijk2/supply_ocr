@@ -1,28 +1,33 @@
 {
-  "resolution": [854, 480],
+  "resolution": [
+    854,
+    480
+  ],
   "rois": {
     "supply": {
-      "mode": "template",
-      "template": "../../a/supply_frame.png",
+      "mode": "static",
+      "x": 784,
+      "y": 1,
+      "w": 57,
+      "h": 18,
       "template_min_conf": 0.8,
-      "padding": [120, 0, 0, 0],
       "enabled": true
     },
     "selection_panel": {
       "mode": "static",
-      "x": 0,
-      "y": 0,
-      "w": 0,
-      "h": 0,
-      "enabled": false
+      "x": 249,
+      "y": 381,
+      "w": 255,
+      "h": 99,
+      "enabled": true
     },
     "production_queue": {
       "mode": "static",
-      "x": 0,
-      "y": 0,
-      "w": 0,
-      "h": 0,
-      "enabled": false
+      "x": 328,
+      "y": 387,
+      "w": 174,
+      "h": 88,
+      "enabled": true
     }
   }
 }
