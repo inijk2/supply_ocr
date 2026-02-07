@@ -4,3 +4,4 @@ __pycache__/
 evidence/
 output.json
 *.mp4
+tests/_tmp_*.json
